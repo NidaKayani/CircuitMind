@@ -42,7 +42,12 @@ app = FastAPI(
 )
 
 # ── RATE LIMITER SETUP ──────────────────────────────────────────
-limiter = Limiter(key_func=get_remote_address)
+# storage_uri points at Redis (e.g. Upstash) in production so limits hold
+# across serverless instances; falls back to in-memory when unset (local dev).
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri=os.environ.get("RATE_LIMIT_REDIS_URL"),
+)
 app.state.limiter = limiter
 
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
