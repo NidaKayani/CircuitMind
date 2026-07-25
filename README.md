@@ -20,6 +20,7 @@ It is **not** a fine-tuned domain-specific model. Circuit generation is done by 
 | **Explain** | [`explain/explain_module.py`](explain/explain_module.py) | Looks each component up in [`utils/component_resolver.py`](utils/component_resolver.py)'s knowledge base (~30 components with role + description), builds a plain-English explanation, current-flow description, and warnings |
 | **Diagnose** | [`diagnose/diagnose_module.py`](diagnose/diagnose_module.py) | Rule-based checks: missing power source, missing current-limiting resistor, no connections defined, BFS-based short-circuit detection, floating (disconnected) components, unspecified capacitor polarity, missing ground reference |
 | **Export** | [`export/export_module.py`](export/export_module.py) | Converts circuit JSON to a SPICE netlist, an SVG schematic (via `schemdraw`), or a gate-graph JSON (for a logic-gate simulator front end) |
+| **Hint** | [`hint/hint_module.py`](hint/hint_module.py) | Given a digital-logic problem (truth table, I/O ports) and a student's current gate/wire graph from an external circuit builder, returns one short, non-spoiler hint via Groq — falls back to a few deterministic rule-based checks (empty canvas, missing I/O gates, floating gates) if the LLM call fails |
 
 A circuit is represented throughout as a simple JSON object:
 ```json
@@ -29,6 +30,8 @@ A circuit is represented throughout as a simple JSON object:
   "connections": ["battery -> resistor -> led"]
 }
 ```
+
+> **Note:** Generate/Explain/Diagnose/Export are all scoped to *electronics* components (batteries, resistors, LEDs, transistors, ICs — see `utils/component_resolver.py`). Hint is the one exception: it's scoped to *digital-logic gates* (AND/OR/NOT/XOR/…) for an external logic-gate circuit builder, and uses its own gate/wire graph shape rather than the `components`/`connections` format above.
 
 ---
 
@@ -43,6 +46,7 @@ CircuitMind/
 ├── explain/explain_module.py   # Circuit JSON → plain-English explanation
 ├── diagnose/diagnose_module.py # Circuit JSON → electrical-issue checks
 ├── export/export_module.py     # Circuit JSON → SPICE / SVG / gate JSON
+├── hint/hint_module.py         # Digital-logic problem + student's gate graph → one hint
 ├── utils/component_resolver.py # Shared component knowledge base + name normalization
 ├── app_streamlit.py            # Streamlit UI (Generate / Explain / Diagnose / Export / Chatbot tabs)
 ├── cv_module/                  # Experimental, NOT wired into the API — see note below
@@ -106,6 +110,7 @@ docker-compose up --build
 | POST | `/explain` | Circuit JSON → plain-English explanation |
 | POST | `/diagnose` | Circuit JSON → electrical-issue report |
 | POST | `/export` | Circuit JSON → `spice` / `svg` / `gate_json` |
+| POST | `/hint` | Digital-logic problem + student's gate graph → one non-spoiler hint |
 | POST | `/generate-and-explain` | Generate + explain + diagnose in one call |
 
 ```bash
@@ -116,7 +121,7 @@ curl -X POST http://localhost:8000/generate \
 
 Full request/response examples are in [`api/README.md`](api/README.md).
 
-Requests are rate-limited per-IP via `slowapi` (5/min on `/generate`, 10/min on `/explain`, `/diagnose`, `/export`, 3/min on `/generate-and-explain`) and, if `CIRCUITMIND_API_KEY` is set, require an `X-API-Key` header.
+Requests are rate-limited per-IP via `slowapi` (5/min on `/generate`, 10/min on `/explain`, `/diagnose`, `/export`, `/hint`, 3/min on `/generate-and-explain`) and, if `CIRCUITMIND_API_KEY` is set, require an `X-API-Key` header.
 
 ---
 

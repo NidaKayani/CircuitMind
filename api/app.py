@@ -24,6 +24,7 @@ from generate.generate import generate_circuit
 from explain.explain_module import explain_circuit
 from diagnose.diagnose_module import diagnose_circuit
 from export.export_module import export_module
+from hint.hint_module import generate_hint
 
 # ── LOGGING ──────────────────────────────────────────────────────
 logging.basicConfig(
@@ -130,6 +131,16 @@ class ExportRequest(BaseModel):
             raise ValueError(f"export_format must be one of {allowed}")
         return v
 
+class HintRequest(BaseModel):
+    problem_title: str = ""
+    problem_description: Optional[str] = ""
+    inputs: list[str] = []
+    outputs: list[str] = []
+    truth_table: list[dict] = []
+    gates: list[dict] = []
+    wires: list[dict] = []
+    last_result: Optional[dict] = None
+
 # ── HEALTH ───────────────────────────────────────────────────────
 @app.get("/", tags=["health"])
 def root():
@@ -199,6 +210,17 @@ def export(
         raise HTTPException(status_code=422, detail=result["message"])
 
     return result
+
+
+@app.post("/hint", tags=["core"])
+@rl("10/minute")
+def hint(
+    request: Request,
+    req: HintRequest,
+    _: None = Depends(verify_api_key),
+):
+    logger.info(f"Hint request: '{req.problem_title[:60]}'")
+    return generate_hint(req.model_dump())
 
 
 @app.post("/generate-and-explain", tags=["core"])
