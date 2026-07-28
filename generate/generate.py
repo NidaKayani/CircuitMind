@@ -40,6 +40,9 @@ def validate_input(prompt: str) -> str:
 # ── Rule-Based Fallback ────────────────────────────────────────────────────────
 
 _RULES = [
+    (["half", "adder"],                         "Half Adder Circuit",       ["input_a", "input_b", "xor", "and", "sum_output", "carry_output"], ["input_a -> xor -> sum_output", "input_b -> xor", "input_a -> and -> carry_output", "input_b -> and"], "Half adder circuit computing sum and carry"),
+    (["full", "adder"],                         "Full Adder Circuit",       ["input_a", "input_b", "cin", "xor1", "xor2", "and1", "and2", "or", "sum_output", "cout"], ["input_a -> xor1 -> xor2 -> sum_output", "input_b -> xor1", "cin -> xor2", "input_a -> and1 -> or -> cout", "input_b -> and1", "xor1 -> and2 -> or", "cin -> and2"], "Full adder circuit with carry-in"),
+    (["logic gate", "logic circuit"],           "Logic Gate Circuit",       ["input_a", "input_b", "and", "or", "output"],          ["input_a -> and -> or -> output", "input_b -> and", "input_b -> or"], "Combinational logic gate circuit"),
     (["led", "light"],                         "LED Circuit",              ["battery", "resistor", "led"],                          ["battery -> resistor -> led"],                        "Basic LED circuit with current-limiting resistor"),
     (["motor"],                                "Motor Circuit",            ["battery", "switch", "dc_motor"],                       ["battery -> switch -> dc_motor"],                     "Basic DC motor circuit with on/off switch"),
     (["buzzer"],                               "Buzzer Circuit",           ["battery", "resistor", "buzzer"],                       ["battery -> resistor -> buzzer"],                     "Buzzer circuit with resistor for sound output"),
