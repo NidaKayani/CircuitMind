@@ -69,3 +69,10 @@ Run_Locally.txt
 .txtconfig
 .txtignore
 /.txtignore
+
+# ─────────────────────────────────────────────
+# Nested Repositories & Local Scratch Files
+# ─────────────────────────────────────────────
+Backend Boolforge/
+Frontend Boolforge/
+prompt.txt
