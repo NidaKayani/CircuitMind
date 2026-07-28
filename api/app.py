@@ -70,7 +70,7 @@ def verify_api_key(x_api_key: str = Header(default=None)):
 # ── CORS ─────────────────────────────────────────────────────────
 allowed_origins = os.environ.get(
     "ALLOWED_ORIGINS",
-    "http://localhost:8501,http://127.0.0.1:8501"
+    "http://localhost:8501,http://127.0.0.1:8501,http://localhost:3000,http://127.0.0.1:3000"
 ).split(",")
 
 app.add_middleware(
