@@ -234,12 +234,13 @@ def generate_gate_json(circuit_name: str, components: list, connections: list) -
             output_counter += 1
         else:
             comp_upper = component.upper()
-            if "XOR" in comp_upper: comp_upper = "XOR"
+            if "XNOR" in comp_upper: comp_upper = "XNOR"
+            elif "XOR" in comp_upper: comp_upper = "XOR"
+            elif "NAND" in comp_upper: comp_upper = "NAND"
+            elif "NOR" in comp_upper: comp_upper = "NOR"
             elif "AND" in comp_upper: comp_upper = "AND"
             elif "OR" in comp_upper: comp_upper = "OR"
             elif "NOT" in comp_upper: comp_upper = "NOT"
-            elif "NAND" in comp_upper: comp_upper = "NAND"
-            elif "NOR" in comp_upper: comp_upper = "NOR"
             gate_type = comp_upper
             num_inputs = 1 if comp_upper == "NOT" else 2
             has_output = True
