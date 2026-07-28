@@ -225,14 +225,24 @@ def generate_gate_json(circuit_name: str, components: list, connections: list) -
     output_counter = 0
 
     for i, component in enumerate(components):
-        if i == 0:
+        comp_lower = component.lower()
+        if comp_lower.startswith("input") or comp_lower.startswith("in_") or comp_lower in ("battery", "power_supply", "solar_cell") or (i == 0 and len(components) <= 3):
             gate_type, num_inputs, has_output = "INPUT",  0, True
             input_counter += 1
-        elif i == len(components) - 1:
+        elif comp_lower.startswith("output") or comp_lower.endswith("_output") or comp_lower.endswith("_out") or comp_lower in ("cout", "sum", "carry", "led", "lamp", "buzzer") or (i == len(components) - 1 and len(components) <= 3):
             gate_type, num_inputs, has_output = "OUTPUT", 1, False
             output_counter += 1
         else:
-            gate_type, num_inputs, has_output = component.upper(), 1, True
+            comp_upper = component.upper()
+            if "XOR" in comp_upper: comp_upper = "XOR"
+            elif "AND" in comp_upper: comp_upper = "AND"
+            elif "OR" in comp_upper: comp_upper = "OR"
+            elif "NOT" in comp_upper: comp_upper = "NOT"
+            elif "NAND" in comp_upper: comp_upper = "NAND"
+            elif "NOR" in comp_upper: comp_upper = "NOR"
+            gate_type = comp_upper
+            num_inputs = 1 if comp_upper == "NOT" else 2
+            has_output = True
 
         gates.append({
             "id":          i,
@@ -247,13 +257,16 @@ def generate_gate_json(circuit_name: str, components: list, connections: list) -
         })
 
     wire_id = 0
+    target_pin_indices = {}
     for conn in connections:
         parts = [p.strip() for p in conn.split("->")]
         for j in range(len(parts) - 1):
             from_id = next((g["id"] for g in gates if g["label"] == parts[j].upper()), None)
             to_id   = next((g["id"] for g in gates if g["label"] == parts[j + 1].upper()), None)
             if from_id is not None and to_id is not None:
-                wires.append({"id": wire_id, "fromId": from_id, "toId": to_id, "toIndex": 0})
+                to_index = target_pin_indices.get(to_id, 0)
+                wires.append({"id": wire_id, "fromId": from_id, "toId": to_id, "toIndex": to_index})
+                target_pin_indices[to_id] = to_index + 1
                 wire_id += 1
 
     return {
