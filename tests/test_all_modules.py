@@ -16,6 +16,7 @@ from generate.generate import generate_circuit
 from explain.explain_module import explain_circuit
 from diagnose.diagnose_module import diagnose_circuit
 from export.export_module import export_module
+from hint.hint_module import generate_hint, _hint_with_rules
 
 
 # ── Fixtures ───────────────────────────────────────────────────────────────────
@@ -222,6 +223,77 @@ class TestExport:
         result = export_module(json.dumps(no_name), export_format="spice")
         assert result["status"] == "success"
         assert result["circuit_name"] == "CircuitMind_Generated_Circuit"
+
+
+# ── Hint ───────────────────────────────────────────────────────────────────────
+# generate_hint() prefers the LLM when GROQ_API_KEY is configured (as it is
+# here), so content-specific assertions target the deterministic rule-based
+# fallback (_hint_with_rules) directly rather than depending on environment
+# state or burning real API calls.
+
+class TestHint:
+    def test_generate_hint_always_returns_hint_and_source(self):
+        result = generate_hint({
+            "problem_title": "Half Adder",
+            "inputs": ["A", "B"],
+            "outputs": ["S", "C"],
+            "gates": [],
+            "wires": [],
+        })
+        assert isinstance(result.get("hint"), str) and result["hint"]
+        assert result["source"] in ("llm", "rule-based")
+
+    def test_generate_hint_with_last_result_does_not_crash(self):
+        result = generate_hint({
+            "problem_title": "Half Adder",
+            "inputs": ["A", "B"],
+            "outputs": ["S", "C"],
+            "gates": [{"id": 1, "type": "INPUT", "label": "A"}],
+            "wires": [],
+            "last_result": {"passed": False, "failing_rows": [{"row": 1}]},
+        })
+        assert isinstance(result["hint"], str)
+
+    def test_rules_empty_canvas_prompts_to_start(self):
+        hint_text = _hint_with_rules({
+            "inputs": ["A", "B"],
+            "outputs": ["S", "C"],
+            "gates": [],
+            "wires": [],
+        })
+        assert "INPUT" in hint_text
+
+    def test_rules_missing_io_count_flagged(self):
+        gates = [{"id": 1, "type": "INPUT", "label": "A"}]
+        hint_text = _hint_with_rules({
+            "inputs": ["A", "B"],
+            "outputs": ["S", "C"],
+            "gates": gates,
+            "wires": [],
+        })
+        assert "1 INPUT" in hint_text
+
+    def test_rules_floating_gate_flagged(self):
+        gates = [
+            {"id": 1, "type": "INPUT", "label": "A"},
+            {"id": 2, "type": "INPUT", "label": "B"},
+            {"id": 3, "type": "XOR", "label": "XOR1"},
+            {"id": 4, "type": "OUTPUT", "label": "S"},
+            {"id": 5, "type": "OUTPUT", "label": "C"},
+        ]
+        wires = [
+            {"id": 1, "fromId": 1, "toId": 3, "toIndex": 0},
+            {"id": 2, "fromId": 2, "toId": 3, "toIndex": 1},
+            {"id": 3, "fromId": 3, "toId": 4, "toIndex": 0},
+            # gate 5 (OUTPUT "C") is never wired
+        ]
+        hint_text = _hint_with_rules({
+            "inputs": ["A", "B"],
+            "outputs": ["S", "C"],
+            "gates": gates,
+            "wires": wires,
+        })
+        assert "C" in hint_text
 
 
 # ── Integration ────────────────────────────────────────────────────────────────

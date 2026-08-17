@@ -58,12 +58,21 @@ cv_module/dataset/
 diagnose/test_results.json
 explain/test_results.json
 export/TestResults.json
+test_results.json
 
 # ─────────────────────────────────────────────
 # Tooling / Misc
 # ─────────────────────────────────────────────
 *.txt.export
 CircuitMind.txt
+Run_Locally.txt
 .txtconfig
 .txtignore
 /.txtignore
+
+# ─────────────────────────────────────────────
+# Nested Repositories & Local Scratch Files
+# ─────────────────────────────────────────────
+Backend Boolforge/
+Frontend Boolforge/
+prompt.txt

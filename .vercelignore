@@ -1,0 +1,6 @@
+website/
+cv_module/
+data/
+tests/
+__pycache__/
+*.md

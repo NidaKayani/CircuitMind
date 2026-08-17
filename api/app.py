@@ -24,6 +24,7 @@ from generate.generate import generate_circuit
 from explain.explain_module import explain_circuit
 from diagnose.diagnose_module import diagnose_circuit
 from export.export_module import export_module
+from hint.hint_module import generate_hint
 
 # ── LOGGING ──────────────────────────────────────────────────────
 logging.basicConfig(
@@ -42,7 +43,12 @@ app = FastAPI(
 )
 
 # ── RATE LIMITER SETUP ──────────────────────────────────────────
-limiter = Limiter(key_func=get_remote_address)
+# storage_uri points at Redis (e.g. Upstash) in production so limits hold
+# across serverless instances; falls back to in-memory when unset (local dev).
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri=os.environ.get("RATE_LIMIT_REDIS_URL"),
+)
 app.state.limiter = limiter
 
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -64,7 +70,7 @@ def verify_api_key(x_api_key: str = Header(default=None)):
 # ── CORS ─────────────────────────────────────────────────────────
 allowed_origins = os.environ.get(
     "ALLOWED_ORIGINS",
-    "http://localhost:8501,http://127.0.0.1:8501"
+    "http://localhost:8501,http://127.0.0.1:8501,http://localhost:3000,http://127.0.0.1:3000"
 ).split(",")
 
 app.add_middleware(
@@ -124,6 +130,16 @@ class ExportRequest(BaseModel):
         if v not in allowed:
             raise ValueError(f"export_format must be one of {allowed}")
         return v
+
+class HintRequest(BaseModel):
+    problem_title: str = ""
+    problem_description: Optional[str] = ""
+    inputs: list[str] = []
+    outputs: list[str] = []
+    truth_table: list[dict] = []
+    gates: list[dict] = []
+    wires: list[dict] = []
+    last_result: Optional[dict] = None
 
 # ── HEALTH ───────────────────────────────────────────────────────
 @app.get("/", tags=["health"])
@@ -194,6 +210,17 @@ def export(
         raise HTTPException(status_code=422, detail=result["message"])
 
     return result
+
+
+@app.post("/hint", tags=["core"])
+@rl("10/minute")
+def hint(
+    request: Request,
+    req: HintRequest,
+    _: None = Depends(verify_api_key),
+):
+    logger.info(f"Hint request: '{req.problem_title[:60]}'")
+    return generate_hint(req.model_dump())
 
 
 @app.post("/generate-and-explain", tags=["core"])

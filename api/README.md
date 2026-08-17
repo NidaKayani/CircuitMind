@@ -20,6 +20,7 @@ This FastAPI server connects all 4 modules (Generate, Explain, Diagnose, Export)
 | POST | `/explain` | Explain a circuit in plain English |
 | POST | `/diagnose` | Check circuit for electrical issues |
 | POST | `/export` | Export circuit to SPICE netlist or SVG |
+| POST | `/hint` | Digital-logic circuit-builder hint (truth table + student's current gate graph → one non-spoiler hint) |
 | POST | `/generate-and-explain` | Generate + explain + diagnose in one request |
 
 ---
@@ -118,6 +119,36 @@ POST /generate-and-explain
   "prompt": "555 timer circuit"
 }
 ```
+
+### Get a hint for a digital-logic problem
+```json
+POST /hint
+{
+  "problem_title": "Half Adder",
+  "problem_description": "Two 1-bit inputs A and B, outputs Sum (S) and Carry (C).",
+  "inputs": ["A", "B"],
+  "outputs": ["S", "C"],
+  "truth_table": [
+    {"A": 0, "B": 0, "S": 0, "C": 0},
+    {"A": 0, "B": 1, "S": 1, "C": 0},
+    {"A": 1, "B": 0, "S": 1, "C": 0},
+    {"A": 1, "B": 1, "S": 0, "C": 1}
+  ],
+  "gates": [{"id": 1, "type": "INPUT", "label": "A"}, {"id": 2, "type": "INPUT", "label": "B"}],
+  "wires": [],
+  "last_result": null
+}
+```
+
+Response:
+```json
+{
+  "hint": "It looks like you've just started ... consider using a gate that produces an output of 1 when the two inputs are different.",
+  "source": "llm"
+}
+```
+
+`gates`/`wires` use the same shape as the logic-gate simulator's export format (`export_format=gate_json`): `{id, type, label, ...}` gates and `{fromId, toId, toIndex}` wires. `last_result` is optional context from the caller's own validator, e.g. `{"passed": false, "failing_rows": [...]}`.
 
 ---
 
